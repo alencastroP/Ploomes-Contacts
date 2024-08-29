@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaSpinner } from 'react-icons/fa';
+
+const Spinner = styled(FaSpinner)`
+  font-size: 40px;
+  color: ${(props) => props.theme.spinnerColor || '#7506be'};
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: ${(props) => props.theme.backgroundColor || '#f5f5f5'};
+`;
+
+const LoadingMessage = styled.p`
+  font-size: 18px;
+  color: ${(props) => props.theme.textColor || '#333'};
+  margin-top: 20px;
+  text-align: center;
+`;
 
 const ContactContainer = styled.div`
   padding: 20px 0px 0px 0px;
@@ -44,6 +71,7 @@ const Button = styled.button`
   display: flex;
   align-items: center;
   gap: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 
   &:hover {
     opacity: 0.8;
@@ -73,6 +101,8 @@ const StyledInput = styled.input`
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  background-color: ${(props) => props.theme.inputBgColor};
+  color: ${(props) => props.theme.textColor};
 `;
 
 const ButtonGroup = styled.div`
@@ -87,6 +117,8 @@ const Contact = ({}) => {
   const [error, setError] = useState(null);
   const [editContactId, setEditContactId] = useState(null);
   const [editableFields, setEditableFields] = useState({});
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [searchFields, setSearchFields] = useState({
     Name: '',
     Email: '',
@@ -94,86 +126,103 @@ const Contact = ({}) => {
     OwnerId: '',
   });
 
+  const fetchContacts = async (pageNumber = 1) => {
+    if (!userKey) {
+      setError('User key not found.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const pageSize = 30;
+    const query = Object.entries(searchFields)
+      .filter(([key, value]) => value)
+      .map(([key, value]) => `contains(${key},'${encodeURIComponent(value)}')`)
+      .join(' and ');
+
+    const filterQueryString = query ? `?$expand=Phones&$filter=${query}` : '?$expand=Phones';
+    const paginatedQueryString = `${filterQueryString}&$top=${pageSize}&$skip=${(pageNumber - 1) * pageSize}`;
+
+    try {
+      const contactsResponse = await fetch(`https://api2.ploomes.com/Contacts${paginatedQueryString}`, {
+        method: 'GET',
+        headers: {
+          'User-Key': userKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!contactsResponse.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const contactsData = await contactsResponse.json();
+      console.log('User data received:', contactsData);
+
+      if (!Array.isArray(contactsData.value)) {
+        throw new Error('API response doesnt have the contacts.');
+      }
+
+      const usersResponse = await fetch('https://api2.ploomes.com/Users', {
+        method: 'GET',
+        headers: {
+          'User-Key': userKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!usersResponse.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const usersData = await usersResponse.json();
+      console.log('Uset data received:', usersData);
+
+      const usersMap = new Map(usersData.value.map(user => [user.Id, user.Name]));
+
+      const processedContacts = contactsData.value.map(contact => {
+        const phoneNumber = contact.Phones && contact.Phones.length > 0
+          ? contact.Phones[0].PhoneNumber
+          : 'N/A';
+
+        return {
+          ...contact,
+          PhoneNumber: phoneNumber || 'N/A',
+          OwnerName: usersMap.get(contact.OwnerId) || 'Unknown',
+        };
+      });
+
+      console.log('Contacts:', processedContacts);
+
+      setContacts(prevContacts => pageNumber === 1 ? processedContacts : [...prevContacts, ...processedContacts]);
+      setHasMore(contactsData.value.length === pageSize);
+    } catch (error) {
+      console.error('Error searching contacts. :(', error);
+      setError('Error searching contacts. :(');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchContacts = async () => {
-      if (!userKey) {
-        setError('User key not found.');
-        setLoading(false);
-        return;
-      }
+    fetchContacts(page);
+  }, [userKey, searchFields, page]);
 
-      setContacts([]);
-      setLoading(true);
-      setError('');
+  const handleScroll = () => {
+    if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || loading || !hasMore) {
+      return;
+    }
+    setPage(prevPage => prevPage + 1);
+  };
 
-      const query = Object.entries(searchFields)
-        .filter(([key, value]) => value)
-        .map(([key, value]) => `contains(${key},'${encodeURIComponent(value)}')`)
-        .join(' and ');
-
-      const filterQueryString = query ? `?$expand=Phones&$filter=${query}` : '?$expand=Phones';
-
-      try {
-        const contactsResponse = await fetch(`https://api2.ploomes.com/Contacts${filterQueryString}`, {
-          method: 'GET',
-          headers: {
-            'User-Key': userKey,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!contactsResponse.ok) {
-          throw new Error('Network response was not ok');
-        }
-
-        const contactsData = await contactsResponse.json();
-        console.log('Dados de contatos recebidos:', contactsData);
-
-        if (!Array.isArray(contactsData.value)) {
-          throw new Error('Resposta da API não contém contatos.');
-        }
-
-        const usersResponse = await fetch('https://api2.ploomes.com/Users', {
-          method: 'GET',
-          headers: {
-            'User-Key': userKey,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!usersResponse.ok) {
-          throw new Error('Network response was not ok');
-        }
-
-        const usersData = await usersResponse.json();
-        console.log('Dados de usuários recebidos:', usersData);
-
-        const usersMap = new Map(usersData.value.map(user => [user.Id, user.Name]));
-
-        const processedContacts = contactsData.value.map(contact => {
-          const phoneNumber = contact.Phones && contact.Phones.length > 0
-            ? contact.Phones[0].PhoneNumber
-            : 'N/A';
-
-          return {
-            ...contact,
-            PhoneNumber: phoneNumber || 'N/A',
-            OwnerName: usersMap.get(contact.OwnerId) || 'Desconhecido',
-          };
-        });
-
-        console.log('Contatos processados:', processedContacts);
-        setContacts(processedContacts);
-      } catch (error) {
-        console.error('Error seaching contacts. :(', error);
-        setError('Error seaching contacts. :(');
-      } finally {
-        setLoading(false);
-      }
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
     };
-
-    fetchContacts();
-  }, [userKey, searchFields]);
+  }, [loading, hasMore]);
 
   const handleEdit = (contactId) => {
     setEditContactId(contactId);
@@ -239,9 +288,9 @@ const Contact = ({}) => {
 
         if (response.ok) {
           setContacts((prevContacts) => prevContacts.filter((contact) => contact.Id !== contactId));
-          alert('Client deleted successfully.');
+          alert('Contact deleted successfully.');
         } else {
-          alert('Error deleting the client.');
+          alert('Error deleting the contact.');
         }
       } catch (error) {
         alert('Error processing the request.');
@@ -262,7 +311,12 @@ const Contact = ({}) => {
   };
 
   if (loading) {
-    return <ContactContainer>Loading contacts...</ContactContainer>;
+    return (
+      <LoadingContainer>
+        <Spinner />
+        <LoadingMessage>Loading contacts, please wait...</LoadingMessage>
+      </LoadingContainer>
+    );
   }
 
   return (
@@ -287,7 +341,7 @@ const Contact = ({}) => {
                     <StyledInput
                       type="text"
                       name="Name"
-                      value={editableFields.Name}
+                      value={editableFields.Name || ''}
                       onChange={handleFieldChange}
                     />
                   ) : (
@@ -299,7 +353,7 @@ const Contact = ({}) => {
                     <StyledInput
                       type="email"
                       name="Email"
-                      value={editableFields.Email}
+                      value={editableFields.Email || ''}
                       onChange={handleFieldChange}
                     />
                   ) : (
@@ -311,7 +365,7 @@ const Contact = ({}) => {
                     <StyledInput
                       type="text"
                       name="Phone"
-                      value={editableFields.Phone}
+                      value={editableFields.Phone || ''}
                       onChange={handleFieldChange}
                     />
                   ) : (
@@ -325,7 +379,7 @@ const Contact = ({}) => {
                     <StyledInput
                       type="text"
                       name="OwnerId"
-                      value={editableFields.OwnerName}
+                      value={editableFields.OwnerName || ''}
                       onChange={handleFieldChange}
                     />
                   ) : (

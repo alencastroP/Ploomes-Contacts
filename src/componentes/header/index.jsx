@@ -22,7 +22,7 @@ const HeaderContainer = styled.header`
   padding: 30px 15px 25px 15px;
   background-color: ${({ theme }) => theme.headerBgColor};
   color: ${({ theme }) => theme.textColor};
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   justify-content: space-between;
 `;
@@ -46,6 +46,7 @@ const SearchInput = styled.input`
   color: ${({ theme }) => theme.textColor};
   font-size: 0.875rem;
   flex: 1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 
   @media (max-width: 768px) {
     max-width: 100%;
@@ -70,6 +71,7 @@ const Button = styled.button`
   border: none;
   border-radius: 4px;
   font-size: 0.875rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 
   &:hover {

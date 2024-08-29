@@ -9,7 +9,7 @@ const NewContactButton = styled.button`
   color: ${({ theme }) => theme.buttonTextColor};
   border: none;
   border-radius: 50%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   font-size: 2.2rem;
   cursor: pointer;
   z-index: 1000;

@@ -5,13 +5,13 @@ const SidebarContainer = styled.div`
   position: fixed;
   top: 0;
   right: ${({ isOpen }) => (isOpen ? '-100%' : '0%')};
-  width: 320px;
+  width: 250px;
   height: 100vh;
   background-color: ${({ theme }) => theme.sidebarBgColor || '#fff'};
   box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
   transition: right 0.3s ease-in-out;
   z-index: 1001;
-  padding: 30px;
+  padding: 40px;
   overflow-y: auto;
 `;
 
@@ -23,9 +23,13 @@ const FormContainer = styled.form`
 
 const FormTitle = styled.h2`
   text-align: center;
-  font-size: 2rem;
+  padding: 12px;
+  font-size: 1.1rem;
   color: ${(props) => props.theme.titleColor};
   margin-bottom: 25px;
+  border: 1px solid ${({ theme }) => theme.buttonBgColor};
+  border-radius: 4px;
+  background-color: #1a1a1a;
 `
 
 const Input = styled.input`
@@ -34,10 +38,11 @@ const Input = styled.input`
   border: 1px solid ${({ theme }) => theme.borderColor};
   background-color: ${({ theme }) => theme.inputBgColor};
   color: ${({ theme }) => theme.textColor};
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 `;
 
 const ButtonContainer = styled.div`
-  margin-top: 25px;
+  margin-top: 45px;
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -47,6 +52,7 @@ const Button = styled.button`
   padding: 10px;
   border-radius: 4px;
   background-color: ${({ theme }) => theme.buttonBgColor};
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);;
   color: ${({ theme }) => theme.buttonTextColor};
   border: none;
   cursor: pointer;

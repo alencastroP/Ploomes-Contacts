@@ -14,8 +14,9 @@ const FormWrapper = styled.form`
   background-color: #1f1f1f;
   padding: 40px;
   border-radius: 8px;
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
-  width: 260px;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  height: 330px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -29,24 +30,26 @@ const PlooIco = styled.img`
 `
 
 const FormTitle = styled.h2`
-  margin-bottom: 80px;
-  margin-left: 35px;
+  margin-bottom: 100px;
+  margin-left: 28px;
   justify-content: center;
-  font-size: 2.0rem;
+  font-size: 2.5rem;
   color: #ffffff;
 `;
 
 const Input = styled.input`
   width: 92.5%;
-  padding: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
   border-radius: 4px;
   border: 0.5px solid #3a3a3a;
   background-color: ${({ theme }) => theme.inputBgColor};
-  margin-bottom: 70px;
+  margin-bottom: 100px;
 `;
 
 const SubmitButton = styled.button`
-  padding: 10px 20px;
+  padding: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
   background-color: #9353e6;
   color: white;
   border: none;
@@ -67,9 +70,9 @@ const FormFooter = styled.footer`
   left: 0;
   background-color: #3a3a3a;
   color: #fff;
-  padding: 0.3rem;
+  padding: 0.7rem;
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
 `;
 
 const UKForm = () => {
