@@ -24,9 +24,9 @@ const FormWrapper = styled.form`
 `;
 
 const PlooIco = styled.img`
-  width: 60px;
+  width: 230px;
   margin-bottom: -18px;
-  margin-right: 5px;
+  margin-right: 1px;
 `
 
 const FormTitle = styled.h2`
@@ -83,7 +83,7 @@ const UKForm = () => {
   useEffect(() => {
     const savedKey = localStorage.getItem('userKey');
     if (savedKey) {
-      navigate('/lista-clientes', { replace: true });
+      navigate('/contact-list', { replace: true });
     }
   }, [navigate]);
 
@@ -91,7 +91,7 @@ const UKForm = () => {
     e.preventDefault();
 
     if (!userKey) {
-      setError('Por favor, insira a chave do usuário.');
+      setError('Please, insert a user-key.');
       return;
     }
 
@@ -104,8 +104,7 @@ const UKForm = () => {
       <FormContainer>
         <FormWrapper onSubmit={handleSubmit}>
             <FormTitle>
-              <PlooIco src="src/assets/ploomes_ico.svg"></PlooIco>
-              Ploomes
+              <PlooIco src="src/assets/ploomes_logo.png"></PlooIco>
             </FormTitle>
           <Input
             type="text"

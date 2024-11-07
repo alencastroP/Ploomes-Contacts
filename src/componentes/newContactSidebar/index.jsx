@@ -5,7 +5,7 @@ const SidebarContainer = styled.div`
   position: fixed;
   top: 0;
   right: ${({ isOpen }) => (isOpen ? '-100%' : '0%')};
-  width: 250px;
+  width: 300px;
   height: 100vh;
   background-color: ${({ theme }) => theme.sidebarBgColor || '#fff'};
   box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
@@ -27,7 +27,6 @@ const FormTitle = styled.h2`
   font-size: 1.1rem;
   color: ${(props) => props.theme.titleColor};
   margin-bottom: 25px;
-  border: 1px solid ${({ theme }) => theme.buttonBgColor};
   border-radius: 4px;
   background-color: #1a1a1a;
 `

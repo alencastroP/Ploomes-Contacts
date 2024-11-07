@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaEdit, FaTrash, FaSpinner } from 'react-icons/fa';
+import Header from '../header';
 
 const Spinner = styled(FaSpinner)`
   font-size: 40px;
@@ -109,106 +110,9 @@ const ButtonGroup = styled.div`
   display: flex;
   gap: 10px;
 `;
-
-const Contact = ({}) => {
-  const userKey = localStorage.getItem('userKey');
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editContactId, setEditContactId] = useState(null);
-  const [editableFields, setEditableFields] = useState({});
+const Contact = ({ contacts, setContacts, loading, error, editContactId, editableFields, handleEdit, handleSave, handleDelete, handleCancel, handleFieldChange}) => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [searchFields, setSearchFields] = useState({
-    Name: '',
-    Email: '',
-    Phone: '',
-    OwnerId: '',
-  });
-
-  const fetchContacts = async (pageNumber = 1) => {
-    if (!userKey) {
-      setError('User key not found.');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const pageSize = 30;
-    const query = Object.entries(searchFields)
-      .filter(([key, value]) => value)
-      .map(([key, value]) => `contains(${key},'${encodeURIComponent(value)}')`)
-      .join(' and ');
-
-    const filterQueryString = query ? `?$expand=Phones&$filter=${query}` : '?$expand=Phones';
-    const paginatedQueryString = `${filterQueryString}&$top=${pageSize}&$skip=${(pageNumber - 1) * pageSize}`;
-
-    try {
-      const contactsResponse = await fetch(`https://api2.ploomes.com/Contacts${paginatedQueryString}`, {
-        method: 'GET',
-        headers: {
-          'User-Key': userKey,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!contactsResponse.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const contactsData = await contactsResponse.json();
-      console.log('User data received:', contactsData);
-
-      if (!Array.isArray(contactsData.value)) {
-        throw new Error('API response doesnt have the contacts.');
-      }
-
-      const usersResponse = await fetch('https://api2.ploomes.com/Users', {
-        method: 'GET',
-        headers: {
-          'User-Key': userKey,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!usersResponse.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const usersData = await usersResponse.json();
-      console.log('Uset data received:', usersData);
-
-      const usersMap = new Map(usersData.value.map(user => [user.Id, user.Name]));
-
-      const processedContacts = contactsData.value.map(contact => {
-        const phoneNumber = contact.Phones && contact.Phones.length > 0
-          ? contact.Phones[0].PhoneNumber
-          : 'N/A';
-
-        return {
-          ...contact,
-          PhoneNumber: phoneNumber || 'N/A',
-          OwnerName: usersMap.get(contact.OwnerId) || 'Unknown',
-        };
-      });
-
-      console.log('Contacts:', processedContacts);
-
-      setContacts(prevContacts => pageNumber === 1 ? processedContacts : [...prevContacts, ...processedContacts]);
-      setHasMore(contactsData.value.length === pageSize);
-    } catch (error) {
-      console.error('Error searching contacts. :(', error);
-      setError('Error searching contacts. :(');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchContacts(page);
-  }, [userKey, searchFields, page]);
 
   const handleScroll = () => {
     if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || loading || !hasMore) {
@@ -224,92 +128,6 @@ const Contact = ({}) => {
     };
   }, [loading, hasMore]);
 
-  const handleEdit = (contactId) => {
-    setEditContactId(contactId);
-    const contact = contacts.find((c) => c.Id === contactId);
-    setEditableFields({
-      Name: contact.Name,
-      Email: contact.Email,
-      Phone: contact.Phones && contact.Phones.length > 0 ? contact.Phones[0].PhoneNumber : '',
-      OwnerId: contact.OwnerId,
-    });
-  };
-
-  const handleSave = async (contactId) => {
-    const updatedFields = {};
-
-    const contact = contacts.find((c) => c.Id === contactId);
-    if (editableFields.Name !== contact.Name) updatedFields.Name = editableFields.Name;
-    if (editableFields.Email !== contact.Email) updatedFields.Email = editableFields.Email;
-    if (
-      editableFields.Phone !== (contact.Phones && contact.Phones.length > 0 ? contact.Phones[0].PhoneNumber : '')
-    )
-      updatedFields.Phones = [{ PhoneNumber: editableFields.Phone }];
-    if (editableFields.OwnerId !== contact.OwnerId) updatedFields.OwnerId = editableFields.OwnerId;
-
-    if (Object.keys(updatedFields).length > 0) {
-      try {
-        const response = await fetch(`https://api2.ploomes.com/Contacts(${contactId})`, {
-          method: 'PATCH',
-          headers: {
-            'User-Key': userKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedFields),
-        });
-
-        if (response.ok) {
-          setContacts((prevContacts) =>
-            prevContacts.map((contact) => (contact.Id === contactId ? { ...contact, ...updatedFields } : contact))
-          );
-          alert('Client updated successfully.');
-        } else {
-          alert('Error updating the client.');
-        }
-      } catch (error) {
-        alert('Client deleted successfully.');
-      }
-    }
-
-    setEditContactId(null);
-  };
-
-  const handleDelete = async (contactId) => {
-    const confirmed = window.confirm('Do you really want to delete this contact?');
-    if (confirmed) {
-      try {
-        const response = await fetch(`https://api2.ploomes.com/Contacts(${contactId})`, {
-          method: 'DELETE',
-          headers: {
-            'User-Key': userKey,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          setContacts((prevContacts) => prevContacts.filter((contact) => contact.Id !== contactId));
-          alert('Contact deleted successfully.');
-        } else {
-          alert('Error deleting the contact.');
-        }
-      } catch (error) {
-        alert('Error processing the request.');
-      }
-    }
-  };
-
-  const handleCancel = () => {
-    setEditContactId(null);
-  };
-
-  const handleFieldChange = (e) => {
-    const { name, value } = e.target;
-    setEditableFields((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
-  };
-
   if (loading) {
     return (
       <LoadingContainer>
@@ -319,9 +137,12 @@ const Contact = ({}) => {
     );
   }
 
+
+  
   return (
     <ContactContainer>
       {error && <p>{error}</p>}
+      
       <Table>
         <thead>
           <tr>
@@ -371,19 +192,21 @@ const Contact = ({}) => {
                   ) : (
                     contact.Phones && contact.Phones.length > 0
                       ? contact.Phones[0].PhoneNumber
-                      : 'Não informado'
+                      : 'Not provided'
                   )}
                 </TableCell>
                 <TableCell>
                   {editContactId === contact.Id ? (
                     <StyledInput
                       type="text"
-                      name="OwnerId"
-                      value={editableFields.OwnerName || ''}
+                      name="Owner"
+                      value={editableFields.Owner.Name || ''}
                       onChange={handleFieldChange}
                     />
                   ) : (
-                    contact.OwnerName
+                    contact.Owner && contact.Owner.length > 0
+                      ? contact.Owner.Name
+                      : 'Not provided'
                   )}
                 </TableCell>
                 <TableCell>

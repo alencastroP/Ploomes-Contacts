@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,9 +9,8 @@ const IconContainer = styled.div`
 `;
 
 const PlooIco = styled.img`
-  filter: ${({ theme }) => theme.isDarkMode ? 'none' : 'brightness(0) invert(1)'};
   width: 40px;
-  padding: 0px 20px 0px 10px;
+  padding: 5px 20px 5px 10px;
 `;
 
 const HeaderContainer = styled.header`
@@ -19,26 +18,34 @@ const HeaderContainer = styled.header`
   top: 0;
   left: 0;
   width: 100%;
+  height: 5%;
   padding: 30px 15px 25px 15px;
   background-color: ${({ theme }) => theme.headerBgColor};
   color: ${({ theme }) => theme.textColor};
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   justify-content: space-between;
-`;
-
-const SearchContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  justify-content: start;
+  @media (max-width: 1177px) {
+    height: 4%;
+  }
   @media (max-width: 768px) {
+    height: 10%; 
     max-width: 100%;
     display: grid;
     justify-content: center;
   }
 `;
 
-const SearchInput = styled.input`
+const SearchContainer = styled.div`
+  display: flex;
+  gap: 10px;
+  justify-content: start;
+  @media (max-width: 1177px) {
+    height: 100%;
+  }
+`;
+
+const SearchInputStyled = styled.input`
   padding: 6px 8px;
   border-radius: 4px;
   border: 0.5px solid ${({ theme }) => theme.borderColor};
@@ -47,9 +54,42 @@ const SearchInput = styled.input`
   font-size: 0.875rem;
   flex: 1;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-
+  box-sizing: border-box;
   @media (max-width: 768px) {
     max-width: 100%;
+  }
+`;
+
+const DropdownContainer = styled.div`
+  position: relative;
+  flex: 1;
+  display: flex;
+`;
+
+const DropdownList = styled.ul`
+  position: absolute;
+  border-radius: 4px;
+  border: 0.5px solid ${({ theme }) => theme.borderColor};
+  background-color: ${({ theme }) => theme.inputBgColor};
+  max-height: 200px;
+  overflow-y: auto;
+  width: 95%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  padding: 4px 8px;
+  margin: 0;
+  top: 35px;
+  z-index: 1000;
+  overflow: hidden;
+`;
+
+const DropdownItem = styled.li`
+  padding: 6px 8px;
+  margin-top: 2px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.hoverBgColor};
   }
 `;
 
@@ -93,112 +133,160 @@ const Header = ({ toggleDarkMode, setSearchFields, fetchContacts }) => {
     Name: '',
     Email: '',
     Phone: '',
-    OwnerId: '',
+    Owner: '',
   });
 
+  const [themeButtonLabel, setThemeButtonLabel] = useState('Light Theme');
+  const [isDarkMode, setIsDarkMode] = useState(
+    localStorage.getItem('isDarkMode') === 'true');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownData, setDropdownData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleSearchChange = (e) => {
-    const { name, value } = e.target;
-    setLocalSearchFields((prevFields) => ({
-      ...prevFields,
-      [name]: value,
-    }));
-  };
+  useEffect(() => {
+    const isDarkMode = localStorage.getItem('isDarkMode') === 'true';
+    setThemeButtonLabel(isDarkMode ? 'Light Theme' : 'Dark Theme');
+  }, [isDarkMode]);
 
-  const handleSearch = async () => {
-    const userKey = localStorage.getItem('userKey');
-
-    if (!userKey) {
-      alert("UserKey isn't defined.");
-      return;
-    }
-
-    const query = Object.entries(localSearchFields)
-      .filter(([key, value]) => value)
-      .map(([key, value]) => `contains(${key},'${encodeURIComponent(value)}')`)
-      .join(' and ');
-
-    const filterQueryString = query ? `?$filter=${query}` : '';
-
-    console.log('Filter Query String:', filterQueryString);
-
+  const fetchDropdownData = async () => {
     try {
-      const response = await fetch(`https://api2.ploomes.com/Contacts${filterQueryString}`, {
+      const userKey = localStorage.getItem('userKey');
+      const response = await fetch('https://api2.ploomes.com/Users', {
         method: 'GET',
         headers: {
           'User-Key': userKey,
           'Content-Type': 'application/json',
         },
       });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
       const data = await response.json();
-      console.log('Data received:', data);
-
-      setSearchFields(localSearchFields);
-      fetchContacts();
+      if (data && data.value) {
+        setDropdownData(data.value);
+        setFilteredData(data.value);
+      } else {
+        setDropdownData([]);
+        setFilteredData([]);
+      }
     } catch (error) {
-      console.error('Error fetching contacts:', error);
-      alert('Error fetching contacts.');
+      console.error('Erro ao buscar dados da API', error);
+    }
+    console.log(response)
+  };
+
+  const handleInputClick = (e) => {
+    if (e.target.name === 'Owner') {
+      setIsDropdownOpen(true);
+      fetchDropdownData();
     }
   };
 
-  const handleClearUserKey = () => {
-    localStorage.removeItem('userKey');
-    navigate('/');
-    alert('UserKey removed! :)');
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setLocalSearchFields((prevFields) => ({
+      ...prevFields,
+      [name]: value,
+    }));
+    if (name === 'Owner') {
+      const filtered = dropdownData.filter(item =>
+        item.Name?.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredData(filtered);
+    }
   };
 
-  const handleToggleDarkMode = () => {
+  const handleItemClick = (item) => {
+    setLocalSearchFields((prevFields) => ({
+      ...prevFields,
+      Owner: item.Name,
+    }));
+    setIsDropdownOpen(false);
+  };
+
+  const handleSearch = () => {
+    setSearchFields(localSearchFields);
+    fetchContacts();
+  };
+
+  const handleClickOutside = (event) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const handleThemeToggle = () => {
     toggleDarkMode();
     const isDarkMode = localStorage.getItem('isDarkMode') === 'true';
-    document.body.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    setThemeButtonLabel(isDarkMode ? 'Dark Theme' : 'Light Theme');
   };
 
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   return (
     <HeaderContainer>
       <SearchContainer>
         <IconContainer>
-          <PlooIco src="src/assets/ploomes_ico.svg" />
+        <PlooIco
+            src={
+              isDarkMode
+                ? 'src/assets/white_ploomes_ico.png'
+                : 'src/assets/ploomes_ico.png'
+            }
+            alt="Logo"
+          />
         </IconContainer>
-        <SearchInput
+        <SearchInputStyled
           type="text"
           name="Name"
           value={localSearchFields.Name}
-          onChange={handleSearchChange}
+          onChange={handleInputChange}
           placeholder="Name"
         />
-        <SearchInput
+        <SearchInputStyled
           type="email"
           name="Email"
           value={localSearchFields.Email}
-          onChange={handleSearchChange}
+          onChange={handleInputChange}
           placeholder="E-mail"
         />
-        <SearchInput
+        <SearchInputStyled
           type="tel"
           name="Phone"
           value={localSearchFields.Phone}
-          onChange={handleSearchChange}
+          onChange={handleInputChange}
           placeholder="Phone Number"
         />
-        <SearchInput
-          type="text"
-          name="OwnerId"
-          value={localSearchFields.OwnerId}
-          onChange={handleSearchChange}
-          placeholder="Owner"
-        />
+        <DropdownContainer ref={dropdownRef}>
+          <SearchInputStyled
+            type="text"
+            name="Owner"
+            value={localSearchFields.Owner}
+            onChange={handleInputChange}
+            onClick={handleInputClick}
+            placeholder="Owner"
+          />
+          {isDropdownOpen && (
+            <DropdownList>
+              {filteredData.map((item, index) => (
+                <DropdownItem key={index} onClick={() => handleItemClick(item)}>
+                  {item.Name || 'Sem nome'}
+                </DropdownItem>
+              ))}
+            </DropdownList>
+          )}
+        </DropdownContainer>
         <ButtonGroup>
           <Button onClick={handleSearch}>Search</Button>
-          <Button onClick={handleToggleDarkMode}>
-            {localStorage.getItem('isDarkMode') === 'true' ? 'Dark Theme' : 'Light Theme'}
-          </Button>
-          <Button onClick={handleClearUserKey}>Leave</Button>
+          <Button onClick={handleThemeToggle}>{themeButtonLabel}</Button>
+          <Button onClick={() => {
+            localStorage.removeItem('userKey');
+            navigate('/');
+            alert('UserKey removed!');
+          }}>Leave</Button>
         </ButtonGroup>
       </SearchContainer>
     </HeaderContainer>
